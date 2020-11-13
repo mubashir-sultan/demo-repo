@@ -7,3 +7,5 @@ And, some more description.
 and, here's some more text
 
 some message
+
+add this to your index.html
