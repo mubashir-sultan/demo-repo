@@ -1,0 +1,723 @@
+---
+title: "Item Selection"
+author: "Mubashir Sultan"
+date: "2/17/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries and initial setup,  include=FALSE}
+#loading libraries
+library(readr)
+library(readxl)
+library(writexl)
+library(tidyverse)
+library(jtools)
+```
+
+```{r loading dataset,  include=FALSE}
+rm(list=ls());
+
+# reading excel sheet
+df <- read_excel("/Users/mubashirsultan/Dropbox/partisanship selection example_RP2.xlsx", sheet = 1, col_names = TRUE, col_types = NULL)
+
+# removing unnecessary columns
+df_slim <- df[, c("Item #", "Category", "Image Name", "Headline Summary", "Acc_Abs_Dem", "Acc_Abs_Rep","Acc_Dem", "Acc_Rep", "Fam_Dem", "Fam_Rep", "Par_Combined")]
+
+#add whether the items are democratic favoured or republican favoured
+df_slim$Par_Combined <- ifelse(df_slim$Par_Combined > 3.5, "Rep Favoured", "Dem Favoured")
+
+# long format
+df_slim_long <- gather(df_slim, key = "measurement", value = "value", -c("Item #", "Category", "Image Name", "Headline Summary", "Par_Combined"))
+
+# adding political variable
+df_slim_long$political_leaning <- "Democrat"
+
+df_slim_long$political_leaning <- ifelse(str_detect(df_slim_long$measurement, "Rep") == TRUE, df_slim_long$political_leaning <- "Republican", df_slim_long$political_leaning <- "Democrat")
+
+df_slim_long$measurement <- str_replace(df_slim_long$measurement, c("_Rep"), "")
+df_slim_long$measurement <- str_replace(df_slim_long$measurement, c("_Dem"), "")
+
+#adding classes
+df_slim_long$measurement <- factor(df_slim_long$measurement, levels = c("Acc_Abs", "Acc", "Fam", ""))
+df_slim_long$Par_Combined <- factor(df_slim_long$Par_Combined, levels = c("Dem Favoured", "Rep Favoured"))
+
+```
+
+
+```{r creating political df,  include=FALSE}
+df_political <- df_slim_long %>% filter(Category == "Political_True" | Category == "Political_Fake")
+
+#political true only
+df_political_true <- df_slim_long %>% filter(Category == "Political_True")
+
+#political false only
+df_political_false <- df_slim_long %>% filter(Category == "Political_Fake")
+```
+
+# Descriptives across the categories (Political_True and _False)
+```{r descriptives across cateogires}
+df_political %>% group_by(Category, measurement) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+# Basic histogram Absolute Accuracy
+df_political %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic boxplot Absolute Accuracy
+df_political %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_boxplot() + theme_apa() + labs(title = "Accuracy Boxplot - Percentage", x = "Percentage Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news")
+
+# Basic histogram Absolute Accuracy
+df_political %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "Grouped by true vs false news, collapsed acorss political leaning") + facet_wrap(~Category)
+
+# Basic boxplot Absolute Accuracy
+df_political %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_boxplot() + theme_apa() + labs(title = "Accuracy Boxplot - Percentage", x = "Percentage Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news") + facet_wrap(~Category)
+
+
+# Basic histogram Relative Accuracy
+df_political %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news \n 1: extremely unlikely; 6 extremely likely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Relative Accuracy
+df_political %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "Collapsed acorss political leaning \n 1: extremely unlikely; 6 extremely likely") + facet_wrap(~Category)
+
+# Basic histogram Familiarity 
+df_political %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news \n 1: not at all; 6 extremely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed")
+
+# Basic histogram Familiarity
+df_political %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "Collapsed acorss political leaning \n 1: not at all; 6 extremely") + facet_wrap(~Category)
+
+```
+
+
+# Descriptives across the Political_True only
+```{r descriptives Political True only}
+df_political_true %>% group_by(political_leaning, measurement) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+# Basic histogram Absolute Accuracy
+df_political_true %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "For Political_True only, collapsed across political leaning") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Absolute Accuracy
+df_political_true %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "For Political_True only") + facet_wrap(~political_leaning)
+
+# Basic histogram Relative Accuracy
+df_political_true %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_True only, collapsed across political leaning \n 1: extremely unlikely; 6 extremely likely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Relative Accuracy
+df_political_true %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_True only \n 1: extremely unlikely; 6 extremely likely") + facet_wrap(~political_leaning)
+
+# Basic histogram Familiarity 
+df_political_true %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_True only, collapsed across political leaning \n 1: not at all; 6 extremely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Familiarity
+df_political_true %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_True only \n 1: not at all; 6 extremely") + facet_wrap(~political_leaning)
+
+```
+
+
+# Descriptives across the Political_False only
+```{r descriptives Political False only}
+df_political_false %>% group_by(political_leaning, measurement) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+# Basic histogram Absolute Accuracy
+df_political_false %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "For Political_False only, collapsed across political leaning") + geom_vline(aes(xintercept = mean(value)), linetype="dashed")
+
+# Basic histogram Absolute Accuracy
+df_political_false %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "For Political_False only") + facet_wrap(~political_leaning)
+
+# Basic histogram Relative Accuracy
+df_political_false %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_False only, collapsed across political leaning \n 1: extremely unlikely; 6 extremely likely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed")
+
+# Basic histogram Relative Accuracy
+df_political_false %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_False only \n 1: extremely unlikely; 6 extremely likely") + facet_wrap(~political_leaning)
+
+# Basic histogram Familiarity 
+df_political_false %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_False only, collapsed across political leaning \n 1: not at all; 6 extremely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Familiarity
+df_political_false %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_False only \n 1: not at all; 6 extremely") + facet_wrap(~political_leaning)
+
+```
+
+
+```{r creating political df with values 3SD on accuracy removed,  include=FALSE}
+# identifying outliers for accuracy - in both the political true and political false data
+
+#political true only
+Q_accuracy_true <- df_political_true %>% filter(measurement == "Acc_Abs")
+Q_accuracy_true <- Q_accuracy_true[["value"]]
+Q_accuracy_true <- quantile(Q_accuracy_true, probs=c(.25, .75), na.rm = FALSE)
+
+IQR_accuracy_true <- df_political_true %>% filter(measurement == "Acc_Abs")
+IQR_accuracy_true <- IQR_accuracy_true[["value"]]
+IQR_accuracy_true <- IQR(Q_accuracy_true)
+
+up_accuracy_true <-  Q_accuracy_true[2]+1.5*IQR_accuracy_true # Upper Range  
+low_accuracy_true <- Q_accuracy_true[1]-1.5*IQR_accuracy_true # Lower Range  
+
+c_df_political_true_abs <- df_political_true %>% filter(measurement == "Acc_Abs")
+c_df_political_true_abs$value[c_df_political_true_abs$value < low_accuracy_true[[1]]] <- NA
+c_df_political_true_abs$value[c_df_political_true_abs$value > up_accuracy_true[[1]]] <- NA
+
+index_remove_true <- is.na(c_df_political_true_abs$value)
+index_remove_true <- c_df_political_true_abs$`Item #`[index_remove_true]
+
+#political false only
+Q_accuracy_false <- df_political_false %>% filter(measurement == "Acc_Abs")
+Q_accuracy_false <- Q_accuracy_false[["value"]]
+Q_accuracy_false <- quantile(Q_accuracy_false, probs=c(.25, .75), na.rm = FALSE)
+
+IQR_accuracy_false <- df_political_false %>% filter(measurement == "Acc_Abs")
+IQR_accuracy_false <- IQR_accuracy_false[["value"]]
+IQR_accuracy_false <- IQR(Q_accuracy_false)
+
+up_accuracy_false <-  Q_accuracy_false[2]+1.5*IQR_accuracy_false # Upper Range  
+low_accuracy_false <- Q_accuracy_false[1]-1.5*IQR_accuracy_false # Lower Range
+
+c_df_political_false_abs <- df_political_false %>% filter(measurement == "Acc_Abs")
+c_df_political_false_abs$value[c_df_political_false_abs$value < low_accuracy_false[[1]]] <- NA
+c_df_political_false_abs$value[c_df_political_false_abs$value > up_accuracy_false[[1]]] <- NA
+
+index_remove_false <- is.na(c_df_political_false_abs$value)
+index_remove_false <- c_df_political_false_abs$`Item #`[index_remove_false]
+
+index_remove_all <- c(index_remove_true, index_remove_false)
+index_remove_all <- unique(index_remove_all)
+# index_remove_all
+
+`%notin%` <- Negate(`%in%`)
+# after identifying which items to remove now creating new corrected dfs
+c_df_political <- df_political %>% filter(`Item #` %notin% index_remove_all)
+
+
+#political true only
+c_df_political_true <- c_df_political %>% filter(Category == "Political_True")
+
+#political false only
+c_df_political_false <- c_df_political %>% filter(Category == "Political_Fake")
+
+```
+
+
+# Clean Descriptives across the categories (Political_True and _False)
+```{r descriptives across cateogires clean}
+c_df_political %>% group_by(Category, measurement) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+# Basic histogram Absolute Accuracy
+c_df_political %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic boxplot Absolute Accuracy
+c_df_political %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_boxplot() + theme_apa() + labs(title = "Accuracy Boxplot - Percentage", x = "Percentage Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news")
+
+# Basic histogram Absolute Accuracy
+c_df_political %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "Grouped by true vs false news, collapsed acorss political leaning") + facet_wrap(~Category)
+
+# Basic boxplot Absolute Accuracy
+c_df_political %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_boxplot() + theme_apa() + labs(title = "Accuracy Boxplot - Percentage", x = "Percentage Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news") + facet_wrap(~Category)
+
+
+# Basic histogram Relative Accuracy
+c_df_political %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news \n 1: extremely unlikely; 6 extremely likely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Relative Accuracy
+c_df_political %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "Collapsed acorss political leaning \n 1: extremely unlikely; 6 extremely likely") + facet_wrap(~Category)
+
+# Basic histogram Familiarity 
+c_df_political %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count",  subtitle = "For all values collapsed across political leaning and true vs false news \n 1: not at all; 6 extremely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed")
+
+# Basic histogram Familiarity
+c_df_political %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "Collapsed acorss political leaning \n 1: not at all; 6 extremely") + facet_wrap(~Category)
+
+```
+
+
+# Clean Descriptives across the Political_True only
+```{r descriptives Political True only clean}
+c_df_political_true %>% group_by(political_leaning, measurement) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+# Basic histogram Absolute Accuracy
+c_df_political_true %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "For Political_True only, collapsed across political leaning") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Absolute Accuracy
+c_df_political_true %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "For Political_True only") + facet_wrap(~political_leaning)
+
+# Basic histogram Relative Accuracy
+c_df_political_true %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_True only, collapsed across political leaning \n 1: extremely unlikely; 6 extremely likely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Relative Accuracy
+c_df_political_true %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_True only \n 1: extremely unlikely; 6 extremely likely") + facet_wrap(~political_leaning)
+
+# Basic histogram Familiarity 
+c_df_political_true %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_True only, collapsed across political leaning \n 1: not at all; 6 extremely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Familiarity
+c_df_political_true %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_True only \n 1: not at all; 6 extremely") + facet_wrap(~political_leaning)
+
+```
+
+
+# Clean Descriptives across the Political_False only
+```{r descriptives Political False only clean}
+c_df_political_false %>% group_by(political_leaning, measurement) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+# Basic histogram Absolute Accuracy
+c_df_political_false %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "For Political_False only, collapsed across political leaning") + geom_vline(aes(xintercept = mean(value)), linetype="dashed")
+
+# Basic histogram Absolute Accuracy
+c_df_political_false %>% filter(measurement == "Acc_Abs") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Percentage", x = "Percentage Values", y = "Count", subtitle = "For Political_False only") + facet_wrap(~political_leaning)
+
+# Basic histogram Relative Accuracy
+c_df_political_false %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_False only, collapsed across political leaning \n 1: extremely unlikely; 6 extremely likely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed")
+
+# Basic histogram Relative Accuracy
+c_df_political_false %>% filter(measurement == "Acc") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Accuracy Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_False only \n 1: extremely unlikely; 6 extremely likely") + facet_wrap(~political_leaning)
+
+# Basic histogram Familiarity 
+c_df_political_false %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_False only, collapsed across political leaning \n 1: not at all; 6 extremely") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") 
+
+# Basic histogram Familiarity
+c_df_political_false %>% filter(measurement == "Fam") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Familiarity Histogram - Likert means", x = "Likert Values", y = "Count", subtitle = "For Political_False only \n 1: not at all; 6 extremely") + facet_wrap(~political_leaning)
+
+```
+
+# Item selection (politically true only)
+## all items, no familiarity thershold (political_true only)
+```{r picking items on the basis of different levels of familarity - true only}
+#all familiarity
+c_df_political_true %>% filter(measurement == "Fam") %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 4)) + labs(title = "All items, all familiarity", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+
+accuracy_all_fam <- c_df_political_true %>% filter(measurement == "Acc_Abs") %>% group_by(political_leaning, Par_Combined) %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_fam
+
+#making table
+accuracy_all_fam_table <- accuracy_all_fam[1:2,-1]
+
+accuracy_all_fam %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+
+```
+
+## all items, familiarity thershold < 3  (political_true only)
+```{r picking items on the basis of different levels of familarity 3 - true only}
+# limited to three
+c_df_political_true %>% filter(measurement == "Fam", value < 3) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 4)) + labs(title = "All items, familiarity < 3", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 3 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_three_index <- c_df_political_true %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_three_index <- accuracy_all_three_index %>% filter(mean < 3)
+accuracy_all_three_index <- accuracy_all_three_index[[1]]
+# accuracy_all_three_index
+# length(accuracy_all_three_index)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_three <- c_df_political_true %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_three_index) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_three
+
+#making table
+accuracy_all_three_table <- accuracy_all_three[1:2,-1]
+
+accuracy_all_three %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+```
+
+## all items,  familiarity thershold < 2.5  (political_true only)
+```{r picking items on the basis of different levels of familarity 2.5 - true only}
+# limited to 2.5
+c_df_political_true %>% filter(measurement == "Fam", value < 2.5) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 5)) + labs(title = "All items, familiarity < 2.5", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 2.5 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_two.five <- c_df_political_true %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_two.five <- accuracy_all_two.five %>% filter(mean < 2.5)
+accuracy_all_two.five <- accuracy_all_two.five[[1]]
+# accuracy_all_two.five
+# length(accuracy_all_two.five)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_two.five <- c_df_political_true %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_two.five) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_two.five
+
+#making table
+accuracy_all_two.five_table <- accuracy_all_two.five[1:2,-1]
+
+accuracy_all_two.five %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+```
+
+## all items, familiarity thershold < 2.4 (political_true only)
+```{r picking items on the basis of different levels of familarity 2.4 - true only}
+# limited to 2.4
+c_df_political_true %>% filter(measurement == "Fam" , value < 2.4) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 5)) + labs(title = "All items, familiarity < 2.4", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 2.4 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_two.four <- c_df_political_true %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_two.four <- accuracy_all_two.four %>% filter(mean < 2.4)
+accuracy_all_two.four <- accuracy_all_two.four[[1]]
+# accuracy_all_two.four
+# length(accuracy_all_two.four)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_two.four <- c_df_political_true %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_two.four) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_two.four
+
+#making table
+accuracy_all_two.four_table <- accuracy_all_two.four[1:2,-1]
+
+accuracy_all_two.four %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+```
+
+## all items, familiarity thershold < 2.3 (political_true only)
+```{r picking items on the basis of different levels of familarity 2.3 - true only}
+# limited to 2.3
+c_df_political_true %>% filter(measurement == "Fam", value < 2.3) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6)) + labs(title = "All items, familiarity < 2.3", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 2.3 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_two.three <- c_df_political_true %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_two.three <- accuracy_all_two.three %>% filter(mean < 2.3)
+accuracy_all_two.three <- accuracy_all_two.three[[1]]
+# accuracy_all_two.three
+# length(accuracy_all_two.three)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_two.three <- c_df_political_true %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_two.three) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_two.three
+
+#making table
+accuracy_all_two.three_table <- accuracy_all_two.three[1:2,-1]
+
+accuracy_all_two.three %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+```
+
+## all items, familiarity thershold < 2.2 (political_true only)
+```{r picking items on the basis of different levels of familarity 2.2 - true only}
+# limited to 2.2
+c_df_political_true %>% filter(measurement == "Fam", value < 2.2) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6)) + labs(title = "All items, familiarity < 2.2", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 2.2 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_two.two <- c_df_political_true %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_two.two <- accuracy_all_two.two %>% filter(mean < 2.2)
+accuracy_all_two.two <- accuracy_all_two.two[[1]]
+# accuracy_all_two.two
+# length(accuracy_all_two.two)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_two.two <- c_df_political_true %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_two.two) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_two.two
+
+#making table
+accuracy_all_two.two_table <- accuracy_all_two.two[1:2,-1]
+
+accuracy_all_two.two %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+```
+
+# Item selection (politically false only)
+## all items, no familiarity thershold (political_false only)
+```{r picking items on the basis of different levels of familarity - false only}
+#all familiarity
+c_df_political_false %>% filter(measurement == "Fam") %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 4)) + labs(title = "All items, all familiarity", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+
+accuracy_all_fam <- c_df_political_false %>% filter(measurement == "Acc_Abs") %>% group_by(political_leaning, Par_Combined) %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_fam
+
+accuracy_all_fam %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+
+```
+
+## all items, familiarity thershold < 3  (political_false only)
+```{r picking items on the basis of different levels of familarity 3 - false only}
+# limited to three
+c_df_political_false %>% filter(measurement == "Fam", value < 3) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 4)) + labs(title = "All items, familiarity < 3", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 3 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_three_index <- c_df_political_false %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_three_index <- accuracy_all_three_index %>% filter(mean < 3)
+accuracy_all_three_index <- accuracy_all_three_index[[1]]
+# accuracy_all_three_index
+# length(accuracy_all_three_index)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_three <- c_df_political_false %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_three_index) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_three
+
+#making table
+accuracy_all_three_table <- rbind(accuracy_all_three_table, accuracy_all_three[1:2,-1])
+accuracy_all_three_table$true_false <- c("Political_True", "Political_True", "Political_False", "Political_False")
+
+accuracy_all_three %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+```
+
+## all items,  familiarity thershold < 2.5  (political_false only)
+```{r picking items on the basis of different levels of familarity 2.5 - false only}
+# limited to 2.5
+c_df_political_false %>% filter(measurement == "Fam", value < 2.5) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 5)) + labs(title = "All items, familiarity < 2.5", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 2.5 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_two.five <- c_df_political_false %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_two.five <- accuracy_all_two.five %>% filter(mean < 2.5)
+accuracy_all_two.five <- accuracy_all_two.five[[1]]
+# accuracy_all_two.five
+# length(accuracy_all_two.five)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_two.five <- c_df_political_false %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_two.five) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_two.five
+
+#making table
+accuracy_all_two.five_table <- rbind(accuracy_all_two.five_table, accuracy_all_two.five[1:2,-1])
+accuracy_all_two.five_table$true_false <- c("Political_True", "Political_True", "Political_False", "Political_False")
+
+accuracy_all_two.five %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+```
+
+## all items, familiarity thershold < 2.4 (political_false only)
+```{r picking items on the basis of different levels of familarity 2.4 - false only}
+# limited to 2.4
+c_df_political_false %>% filter(measurement == "Fam" , value < 2.4) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 5)) + labs(title = "All items, familiarity < 2.4", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 2.4 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_two.four <- c_df_political_false %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_two.four <- accuracy_all_two.four %>% filter(mean < 2.4)
+accuracy_all_two.four <- accuracy_all_two.four[[1]]
+# accuracy_all_two.four
+# length(accuracy_all_two.four)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_two.four <- c_df_political_false %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_two.four) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_two.four
+
+#making table
+accuracy_all_two.four_table <- rbind(accuracy_all_two.four_table, accuracy_all_two.four[1:2,-1])
+accuracy_all_two.four_table$true_false <- c("Political_True", "Political_True", "Political_False", "Political_False")
+
+accuracy_all_two.four %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+```
+
+## all items, familiarity thershold < 2.3 (political_false only)
+```{r picking items on the basis of different levels of familarity 2.3 - false only}
+# limited to 2.3
+c_df_political_false %>% filter(measurement == "Fam", value < 2.3) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6)) + labs(title = "All items, familiarity < 2.3", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 2.3 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_two.three <- c_df_political_false %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_two.three <- accuracy_all_two.three %>% filter(mean < 2.3)
+accuracy_all_two.three <- accuracy_all_two.three[[1]]
+# accuracy_all_two.three
+# length(accuracy_all_two.three)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_two.three <- c_df_political_false %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_two.three) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_two.three
+
+#making table
+accuracy_all_two.three_table <- rbind(accuracy_all_two.three_table, accuracy_all_two.three[1:2,-1])
+accuracy_all_two.three_table$true_false <- c("Political_True", "Political_True", "Political_False", "Political_False")
+
+accuracy_all_two.three %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+```
+
+## all items, familiarity thershold < 2.2 (political_false only)
+```{r picking items on the basis of different levels of familarity 2.2 - false only}
+# limited to 2.2
+c_df_political_false %>% filter(measurement == "Fam", value < 2.2) %>%
+  ggplot() + geom_bar(aes(x = `Image Name`, y = value, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6)) + labs(title = "All items, familiarity < 2.2", x = "Image Name", y = "Familiarity", fill = "Item Pol. Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+# need to find item numbers of those with Fam < 2.2 (across both dem and rep averaged)
+# collapse across dem and rep - find average fam score, then exclude those that you don't need - make index from that.
+accuracy_all_two.two <- c_df_political_false %>% group_by(`Item #`, `Image Name`, Par_Combined) %>% filter(measurement == "Fam") %>% summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+accuracy_all_two.two <- accuracy_all_two.two %>% filter(mean < 2.2)
+accuracy_all_two.two <- accuracy_all_two.two[[1]]
+# accuracy_all_two.two
+# length(accuracy_all_two.two)
+
+#given the index, now subset based on the index numbers.
+accuracy_all_two.two <- c_df_political_false %>% filter(measurement == "Acc_Abs", `Item #` %in% accuracy_all_two.two) %>% group_by(political_leaning, Par_Combined) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+accuracy_all_two.two
+
+#making table
+accuracy_all_two.two_table <- rbind(accuracy_all_two.two_table, accuracy_all_two.two[1:2,-1])
+accuracy_all_two.two_table$true_false <- c("Political_True", "Political_True", "Political_False", "Political_False")
+
+accuracy_all_two.two %>%
+  ggplot(aes(x = Par_Combined, y = mean, fill = as.factor(political_leaning))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + geom_errorbar(aes(ymin = mean-se, ymax =mean + se), width = .2, position = position_dodge(.9)) + theme_apa(legend.use.title = TRUE) + labs(title ="Accuracy across Dem and Rep favoured items", x = "Item Political Leaning", y = "Percent Accuracy", fill = "Pps Political Leaning") + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+```
+
+# Tables of familiarity across True and False items
+```{r item selection tables}
+#fam < 3
+accuracy_all_three_table
+# accuracy_all_three_table$true_false <- factor(accuracy_all_three_table$true_false, levels = c("Political_True", "Political_False"))
+
+# accuracy_all_three_table %>% ggplot() + geom_bar(aes(x = Par_Combined, y = count, fill = Par_Combined), stat = 'identity', position = 'dodge') + theme_apa(legend.use.title = TRUE) + labs(title = "Item Count, fam < 3", x = "Item Pol. Leaning", y = "Count", fill = "Item Pol. Leaning") + facet_wrap(~true_false) + scale_fill_manual(values=c("#0021F5", "#EA3223"))
+
+#fam < 2.5
+accuracy_all_two.five_table
+
+#fam < 2.4
+accuracy_all_two.four_table
+
+#fam < 2.3
+accuracy_all_two.three_table
+
+#fam < 2.2
+accuracy_all_two.two_table
+
+```
+
+```{r}
+#  final selection
+# View(c_df_political_true %>% filter(measurement == "Fam", Par_Combined == "Dem Favoured", political_leaning == "Democrat"))
+
+tmp <- c_df_political_true %>% filter(measurement == "Fam", Par_Combined == "Dem Favoured", political_leaning == "Democrat")
+
+tmp <- rbind(tmp, c_df_political_true %>% filter(measurement == "Fam", Par_Combined == "Rep Favoured", political_leaning == "Democrat"))
+
+tmp <- rbind(tmp, c_df_political_false %>% filter(measurement == "Fam", Par_Combined == "Dem Favoured", political_leaning == "Democrat"))
+
+tmp <- rbind(tmp, c_df_political_false %>% filter(measurement == "Fam", Par_Combined == "Rep Favoured", political_leaning == "Democrat"))
+
+write_xlsx(
+  tmp,
+  path = "item_selection - review.xlsx",
+  col_names = TRUE)
+```
+
+# Partisian 
+```{r preparing df to run histograms for political leaning}
+
+# removing unnecessary columns
+df_slim_leaning <- df[, c("Item #", "Category", "Image Name", "Headline Summary", "Par_Dem", "Par_Rep", "Par_Combined")]
+
+#add whether the items are democratic favoured or republican favoured
+df_slim_leaning$Par_Combined_Categ <- ifelse(df_slim_leaning$Par_Combined > 3.5, "Rep Favoured", "Dem Favoured")
+
+# long format
+df_slim_leaning_long <- gather(df_slim_leaning, key = "measurement", value = "value", -c("Item #", "Category", "Image Name", "Headline Summary", "Par_Combined_Categ"))
+
+# adding political variable
+df_slim_leaning_long$political_leaning <- "Democrat"
+
+df_slim_leaning_long$political_leaning <- ifelse(str_detect(df_slim_leaning_long$measurement, "Rep") == TRUE, df_slim_leaning_long$political_leaning <- "Republican", df_slim_leaning_long$political_leaning <- "Democrat")
+
+df_slim_leaning_long$political_leaning[str_detect(df_slim_leaning_long$measurement, "Combined")] <- "Combined"
+df_slim_leaning_long$Par_Combined_Categ[str_detect(df_slim_leaning_long$measurement, "Combined")] <- "Combined"
+
+df_slim_leaning_long$measurement <- str_replace(df_slim_leaning_long$measurement, c("_Rep"), "")
+df_slim_leaning_long$measurement <- str_replace(df_slim_leaning_long$measurement, c("_Dem"), "")
+df_slim_leaning_long$measurement <- str_replace(df_slim_leaning_long$measurement, c("_Combined"), "")
+
+#adding classesf
+df_slim_leaning_long$Par_Combined_Categ <- factor(df_slim_leaning_long$Par_Combined_Categ, levels = c("Dem Favoured", "Rep Favoured", "Combined"))
+
+df_slim_leaning_long <- df_slim_leaning_long %>% filter(Category == "Political_True" | Category == "Political_Fake")
+
+# removing those high or low in accuracy 
+# after identifying which items to remove now creating new corrected dfs
+df_slim_leaning_long <- df_slim_leaning_long %>% filter(`Item #` %notin% index_remove_all)
+
+```
+
+```{r histograms partisanship}
+
+df_slim_leaning_long %>% group_by(Category, political_leaning) %>%
+  summarise(mean = mean(value), SD = sd(value), count = n(), se = (SD/(sqrt(count))), median = median(value), min = min(value), max = max(value))
+
+# Basic histogram partisanship combined
+df_slim_leaning_long %>% filter(political_leaning == "Combined") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Partisanship - Combined", x = "Likert Values", y = "Count",  subtitle = "If accurate, how favorable to Democrats vs. Republicans (>= 4: Rep)") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") + ylim(0,12.5)
+
+# Basic histogram partisanship combined facet
+df_slim_leaning_long %>% filter(political_leaning == "Combined") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Partisanship - Combined", x = "Likert Values", y = "Count",  subtitle = "If accurate, how favorable to Democrats vs. Republicans (>= 4: Rep)") + facet_wrap(~Category) + ylim(0,12.5)
+
+# Basic histogram partisanship dems only
+df_slim_leaning_long %>% filter(political_leaning == "Democrat") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Partisanship - Democrats Only", x = "Likert Values", y = "Count",  subtitle = "If accurate, how favorable to Democrats vs. Republicans (>= 4: Rep)") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") + ylim(0,12.5)
+
+# Basic histogram partisanship dems only facet
+df_slim_leaning_long %>% filter(political_leaning == "Democrat") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Partisanship - Democrats Only", x = "Likert Values", y = "Count",  subtitle = "If accurate, how favorable to Democrats vs. Republicans (>= 4: Rep)") + facet_wrap(~Category) + ylim(0,12.5)
+
+# Basic histogram partisanship reps
+df_slim_leaning_long %>% filter(political_leaning == "Republican") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Partisanship - Republicans Only", x = "Likert Values", y = "Count",  subtitle = "If accurate, how favorable to Democrats vs. Republicans (>= 4: Rep)") + geom_vline(aes(xintercept = mean(value)), linetype="dashed") + ylim(0,12.5)
+
+# Basic histogram partisanship reps facet
+df_slim_leaning_long %>% filter(political_leaning == "Republican") %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Partisanship - Republicans Only", x = "Likert Values", y = "Count",  subtitle = "If accurate, how favorable to Democrats vs. Republicans (>= 4: Rep)") + facet_wrap(~Category) + ylim(0,12.5)
+
+# Basic histogram all partisanship factors
+df_slim_leaning_long %>% ggplot(aes(x=value)) + geom_histogram() + theme_apa() + labs(title = "Partisanship - All factors", x = "Likert Values", y = "Count",  subtitle = "If accurate, how favorable to Democrats vs. Republicans (>= 4: Rep)") + facet_wrap(~political_leaning)
+
+```
+

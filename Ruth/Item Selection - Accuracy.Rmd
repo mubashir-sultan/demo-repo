@@ -1,0 +1,82 @@
+---
+title: "Item Selection"
+author: "Mubashir Sultan"
+date: "2/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries and initial setup,  include=FALSE}
+#loading libraries
+library(readr)
+library(readxl)
+library(writexl)
+library(tidyverse)
+```
+
+```{r loading dataset}
+rm(list=ls());
+
+# reading excel sheet
+df <- read_excel("/Users/mubashirsultan/Library/Mobile Documents/com~apple~CloudDocs/Brain and Cognitive Sciences /RP2 - False Information and RTs/Study Design/Pennycook Dataset/Pennycook et al. individual level data.xlsx", sheet = 1, col_names = TRUE, col_types = NULL)
+```
+
+
+```{r prepping dataset}
+# adding 'yes' and 'no' accuracy columns
+col_values_abs_runner <- ""
+col_values_rel <- ""
+
+# on the scale 3 stands for slightly unlikely (inaccurate) and 4 stands for slighlty likely (accurate) - hence (crudely put) greater than or equal to 4 accurate and less than or equal to 3 is not accurate
+for (i in 1:225) {
+  col_values_abs_runner <- paste0("f_true_abs_", i)
+  # print(col_values_abs_runner)
+  col_values_rel <- paste0("f_true_", i)
+  # print(col_values_rel)
+  df[, col_values_abs_runner] <- ifelse(df[, col_values_rel] >= 4, TRUE, FALSE) #true = accurate #false = not accurate
+}
+
+# checking to see number of choices correct
+true_index <- c(31:155)
+false_index <- c(1:30, 156:225)
+
+for (i in 1:length(true_index)) {
+  col_values_abs_runner <- paste0("f_true_abs_", true_index[i])
+  df[, col_values_abs_runner] <- ifelse(df[, col_values_abs_runner] == TRUE, TRUE, FALSE) #true index and true = correct, else false (incorrect)
+}
+
+for (i in 1:length(false_index)) {
+  col_values_abs_runner <- paste0("f_true_abs_", false_index[i])
+  df[, col_values_abs_runner] <- ifelse(df[, col_values_abs_runner] == FALSE, TRUE, FALSE) #false index and false = correct, else false (incorrect)
+}
+
+#splitting df into Dem and Rep
+df_dems <- df %>% filter(DemRep == 1) #1 = dem
+df_reps <- df %>% filter(DemRep == 2) #2 = rep
+
+items <- paste0("item_", 1:225)
+percentage <- rep(NA, 1, 225)
+correct_wrong_df_dems <- data.frame("political_leaning" = rep("Dems", 225), items, percentage)
+correct_wrong_df_reps <- data.frame("political_leaning" = rep("Reps", 225), items, percentage)
+
+for (i in 1:length(correct_wrong_df_dems[,"percentage"])) {
+  col_values_abs_runner <- paste0("f_true_abs_", i)
+  correct_wrong_df_dems$percentage[i] <- mean(df_dems[[col_values_abs_runner]], na.rm = TRUE) * 100
+  }
+
+for (i in 1:length(correct_wrong_df_reps[,"percentage"])) {
+  col_values_abs_runner <- paste0("f_true_abs_", i)
+  correct_wrong_df_reps$percentage[i] <- mean(df_reps[[col_values_abs_runner]], na.rm = TRUE) * 100
+  }
+
+correct_wrong_df <- cbind(correct_wrong_df_dems, correct_wrong_df_reps)
+
+write_xlsx(
+  correct_wrong_df,
+  path = "correct_wrong_df(1).xlsx",
+  col_names = TRUE)
+```
+
