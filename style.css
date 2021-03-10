@@ -13,3 +13,7 @@ g {
 b {
   color: purple;
 } 
+
+label {
+  white-space: pre-wrap;
+}
