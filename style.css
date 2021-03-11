@@ -15,7 +15,7 @@
   border-radius: 8px;
 }
 
-#understoodButtonId, #consentButtonId, #nextButtonInputConsentID {
+#understoodButtonId, #consentButtonId, #nextButtonConsentID {
  padding: 10px 32px;
  width: 900px;
 }
