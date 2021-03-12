@@ -17,6 +17,7 @@
   cursor: pointer;
   height: auto;
   border-radius: 8px;  
+  width: 100%;
 }
 
 .button:hover {
@@ -31,13 +32,13 @@
 }
 
 #understoodButtonId, #consentButtonId, #nextButtonConsentID {
- padding: 10px 32px;
- width: 100%;
+/*  padding: 10px 32px;
+ width: 100%; */
 }
 
 #scaleQuestionOneButtonId, #scaleQuestionTwoButtonId, #scaleQuestionThreeButtonId, #scaleQuestionFourButtonId, #scaleQuestionFiveButtonId, #scaleQuestionSixButtonId {
- padding: 10px 32px;
- width: 100%;
+/*  padding: 10px 32px;
+ width: 100%; */
 }
 
 .iframe_letter {
