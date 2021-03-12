@@ -32,7 +32,7 @@
 
 #understoodButtonId, #consentButtonId, #nextButtonConsentID {
  padding: 10px 32px;
- width: 900px;
+ width: 100%;
 }
 
 #scaleQuestionOneButtonId, #scaleQuestionTwoButtonId, #scaleQuestionThreeButtonId, #scaleQuestionFourButtonId, #scaleQuestionFiveButtonId, #scaleQuestionSixButtonId {
