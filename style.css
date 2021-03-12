@@ -30,7 +30,7 @@
  width: 900px;
 }
 
-#politicalFavourQuestion1ButtonId, #politicalFavourQuestion2ButtonId, #politicalFavourQuestion3ButtonId, #politicalFavourQuestion4ButtonId, #politicalFavourQuestion4ButtonId, #politicalFavourQuestion5ButtonId {
+#scaleQuestionOneButtonId, #scaleQuestionTwoButtonId, #scaleQuestionThreeButtonId, #scaleQuestionFourButtonId, #scaleQuestionFiveButtonId, #scaleQuestionSixButtonId {
  padding: 10px 32px;
  width: 100%;
 }
