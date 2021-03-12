@@ -40,3 +40,8 @@
  width: 100%;
 }
 
+.iframe_letter {
+  position: absolute; 
+  height: 100%; 
+  border: none
+}
