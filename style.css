@@ -25,6 +25,11 @@
   transition-duration: 0.4s;
 }
 
+.selected {
+  background-color: #337ab7;
+  color: #ffffff;
+}
+
 #understoodButtonId, #consentButtonId, #nextButtonConsentID {
  padding: 10px 32px;
  width: 900px;
