@@ -36,7 +36,7 @@
  width: 100%; */
 }
 
-#scaleQuestionOneButtonId, #scaleQuestionTwoButtonId, #scaleQuestionThreeButtonId, #scaleQuestionFourButtonId, #scaleQuestionFiveButtonId, #scaleQuestionSixButtonId {
+#scaleQuestionOneButtonId, #scaleQuestionTwoButtonId, #scaleQuestionThreeButtonId, #scaleQuestionFourButtonId, #scaleQuestionFiveButtonId, #scaleQuestionSixButtonId, #scaleQuestionSevenButtonId, #scaleQuestionEightButtonId {
   padding: 8px 10px;
   font-size: 40%;
 }
