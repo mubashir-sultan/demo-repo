@@ -38,7 +38,7 @@
 
 #scaleQuestionOneButtonId, #scaleQuestionTwoButtonId, #scaleQuestionThreeButtonId, #scaleQuestionFourButtonId, #scaleQuestionFiveButtonId, #scaleQuestionSixButtonId, #scaleQuestionSevenButtonId, #scaleQuestionEightButtonId {
   padding: 8px 10px;
-  font-size: 40%;
+  font-size: 35%;
 }
 
 .iframe_letter {
