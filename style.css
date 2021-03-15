@@ -15,7 +15,7 @@
 /*   margin: 4px 2px; */
   margin:0 auto;
   cursor: pointer;
-  height: auto;
+  height: 100%;
   border-radius: 8px;  
   width: 100%;
 }
@@ -37,7 +37,7 @@
 }
 
 #scaleQuestionOneButtonId, #scaleQuestionTwoButtonId, #scaleQuestionThreeButtonId, #scaleQuestionFourButtonId, #scaleQuestionFiveButtonId, #scaleQuestionSixButtonId, #scaleQuestionSevenButtonId, #scaleQuestionEightButtonId {
-  padding: 15px 15px;
+  padding: 8px 10px;
   font-size: 35%;
 }
 
