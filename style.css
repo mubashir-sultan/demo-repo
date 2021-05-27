@@ -51,6 +51,6 @@
 }
 
 #timer {
-  	background: linear-gradient(to right, darkgrey 0%, #ffdb3a 70%, #3fffa2 100%);
+  	background: linear-gradient(to right, darkgrey 60%, #ffdb3a 80%, red 100%);
 }
 
