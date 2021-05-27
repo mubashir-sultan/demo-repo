@@ -50,3 +50,7 @@
   border: none
 }
 
+#timer {
+  	background: linear-gradient(to right, darkgrey 0%, #ffdb3a 70%, #3fffa2 100%);
+}
+
