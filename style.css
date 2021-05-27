@@ -50,7 +50,10 @@
   border: none
 }
 
-/* #timer {
-  	background: linear-gradient(to right, darkgrey 60%, #ffdb3a 80%, red 100%);
-} */
+
+.colour_transition {
+  transition: 'background-color 1s ease-in-out',
+				              "background-color": "#f24a11"
+/*   	background: linear-gradient(to right, darkgrey 60%, #ffdb3a 80%, red 100%); */
+}
 
